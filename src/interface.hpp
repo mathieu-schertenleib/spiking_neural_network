@@ -1,22 +1,38 @@
 #ifndef INTERFACE_HPP
 #define INTERFACE_HPP
 
-#ifndef SDL_MAIN_HANDLED
+#include "neuron.hpp"
+
 #define SDL_MAIN_HANDLED
-#endif
 #include <SDL.h>
+
+#include <random>
+#include <chrono>
+#include <vector>
 
 class Interface
 {
 public:
     [[nodiscard]] Interface();
-    ~Interface() noexcept;
+    ~Interface();
 
     void run();
 
 private:
+    void update_model();
+    void update_ui();
+
     SDL_Window *m_window {};
     SDL_Renderer *m_renderer {};
+    Leaky_integrate_and_fire_neuron m_neuron {};
+    std::default_random_engine m_rng;
+    std::chrono::high_resolution_clock::time_point m_start_time;
+    std::chrono::high_resolution_clock::time_point m_current_time;
+    std::chrono::high_resolution_clock::time_point m_last_time;
+    std::vector<float> m_x_data;
+    std::vector<float> m_y_data;
+
+    static constexpr float m_viewed_seconds {10.0f};
 };
 
 #endif // INTERFACE_HPP

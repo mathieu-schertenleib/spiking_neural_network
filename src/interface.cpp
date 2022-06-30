@@ -1,18 +1,14 @@
 #include "interface.hpp"
 
-#include "neuron.hpp"
-
 #include "imgui.h"
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_sdlrenderer.h"
 
 #include "implot.h"
 
-#include <cmath>
+#include <chrono>
 #include <iostream>
-#include <random>
 #include <stdexcept>
-#include <vector>
 
 Interface::Interface()
 {
@@ -29,6 +25,7 @@ Interface::Interface()
                                 SDL_WINDOW_RESIZABLE);
     if (!m_window)
     {
+        SDL_Quit();
         throw std::runtime_error(SDL_GetError());
     }
 
@@ -36,6 +33,8 @@ Interface::Interface()
         m_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     if (!m_renderer)
     {
+        SDL_DestroyWindow(m_window);
+        SDL_Quit();
         throw std::runtime_error(SDL_GetError());
     }
 
@@ -45,14 +44,17 @@ Interface::Interface()
     ImGui_ImplSDL2_InitForSDLRenderer(m_window, m_renderer);
     ImGui_ImplSDLRenderer_Init(m_renderer);
 
-    ImFontConfig font_config {};
+    /*ImFontConfig font_config {};
     font_config.SizePixels = 32.0f;
-    ImGui::GetIO().Fonts->AddFontDefault(&font_config);
+    ImGui::GetIO().Fonts->AddFontDefault(&font_config);*/
 
     ImPlot::CreateContext();
+
+    std::random_device rd;
+    m_rng.seed(rd());
 }
 
-Interface::~Interface() noexcept
+Interface::~Interface()
 {
     ImPlot::DestroyContext();
 
@@ -67,20 +69,8 @@ Interface::~Interface() noexcept
 
 void Interface::run()
 {
-    std::size_t x {};
-    const std::size_t data_size {1000};
-    std::vector<float> x_data;
-    std::vector<float> y_data;
-    std::vector<float> y2_data;
-    x_data.reserve(data_size);
-    y_data.reserve(data_size);
-    y2_data.reserve(data_size);
-
-    Neuron neuron {};
-
-    std::random_device rd;
-    std::default_random_engine e(rd());
-    std::bernoulli_distribution d(0.1);
+    m_start_time = std::chrono::high_resolution_clock::now();
+    m_last_time = m_start_time;
 
     while (true)
     {
@@ -95,76 +85,94 @@ void Interface::run()
             }
         }
 
-        neuron.update();
-
-        if (d(e))
-        {
-            neuron.add(0.2f);
-        }
-
-        if (x_data.size() >= data_size)
-        {
-            x_data.clear();
-            y_data.clear();
-            y2_data.clear();
-            x_data.reserve(data_size);
-            y_data.reserve(data_size);
-            y2_data.reserve(data_size);
-        }
-        x_data.push_back(static_cast<float>(x));
-        y_data.push_back(neuron.membrane_potential);
-        y2_data.push_back((std::sin(static_cast<float>(x) * 0.02f) + 0.5f) *
-                          0.5f);
-        ++x;
+        m_current_time = std::chrono::high_resolution_clock::now();
+        update_model();
+        m_last_time = m_current_time;
 
         SDL_SetRenderDrawColor(m_renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
         if (SDL_RenderClear(m_renderer) != 0)
         {
-            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "%s\n", SDL_GetError());
+            throw std::runtime_error(SDL_GetError());
         }
 
         ImGui_ImplSDLRenderer_NewFrame();
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
 
-        ImGui::SetNextWindowPos({0, 0});
-        int width, height;
-        SDL_GetWindowSize(m_window, &width, &height);
-        ImGui::SetNextWindowSize(
-            {static_cast<float>(width), static_cast<float>(height)});
-        if (ImGui::Begin("UI",
-                         nullptr,
-                         ImGuiWindowFlags_NoTitleBar |
-                             ImGuiWindowFlags_NoCollapse))
-        {
-            if (ImPlot::BeginPlot("My plot",
-                                  {static_cast<float>(width) * 0.98f,
-                                   static_cast<float>(height) * 0.98f},
-                                  ImPlotFlags_NoTitle))
-            {
-                const std::size_t axis_x_min {x / data_size * data_size};
-                const std::size_t axis_x_max {(x / data_size + 1) * data_size};
-                ImPlot::SetupAxisLimits(ImAxis_X1,
-                                        static_cast<double>(axis_x_min),
-                                        static_cast<double>(axis_x_max),
-                                        ImGuiCond_Always);
-                ImPlot::SetupAxisLimits(ImAxis_Y1, -0.7, 1.2, ImGuiCond_Always);
-                ImPlot::PlotLine("Membrane potential",
-                                 x_data.data(),
-                                 y_data.data(),
-                                 static_cast<int>(x_data.size()));
-                ImPlot::PlotLine("Test second data",
-                                 x_data.data(),
-                                 y2_data.data(),
-                                 static_cast<int>(x_data.size()));
-                ImPlot::EndPlot();
-            }
-            ImGui::End();
-        }
+        update_ui();
 
         ImGui::Render();
         ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
 
         SDL_RenderPresent(m_renderer);
+    }
+}
+
+void Interface::update_model()
+{
+    const auto total_time =
+        std::chrono::duration<float, std::chrono::seconds::period>(
+            m_current_time - m_start_time)
+            .count();
+
+    const auto delta_time =
+        std::chrono::duration<float, std::chrono::seconds::period>(
+            m_current_time - m_last_time)
+            .count();
+
+    m_neuron.update(delta_time);
+
+    std::bernoulli_distribution d(0.1);
+    if (d(m_rng))
+    {
+        m_neuron.input(0.15f);
+    }
+
+    if (!m_x_data.empty() &&
+        m_x_data.back() - m_x_data.front() > m_viewed_seconds)
+    {
+        m_x_data.clear();
+        m_y_data.clear();
+    }
+    m_x_data.push_back(total_time);
+    m_y_data.push_back(m_neuron.membrane_potential);
+}
+
+void Interface::update_ui()
+{
+    ImGui::SetNextWindowPos({0, 0});
+    int width, height;
+    SDL_GetWindowSize(m_window, &width, &height);
+    ImGui::SetNextWindowSize(
+        {static_cast<float>(width), static_cast<float>(height)});
+    if (ImGui::Begin("UI",
+                     nullptr,
+                     ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse))
+    {
+        if (ImPlot::BeginPlot(
+                "Membrane potential plot",
+                {static_cast<float>(width), static_cast<float>(height)},
+                ImPlotFlags_NoTitle))
+        {
+            const auto axis_x_min = m_x_data.front();
+            const auto axis_x_max = m_x_data.front() + m_viewed_seconds;
+            ImPlot::SetupAxisLimits(ImAxis_X1,
+                                    static_cast<double>(axis_x_min),
+                                    static_cast<double>(axis_x_max),
+                                    ImGuiCond_Always);
+            ImPlot::SetupAxisLimits(
+                ImAxis_Y1,
+                -0.2,
+                static_cast<double>(
+                    Leaky_integrate_and_fire_neuron::threshold_potential) +
+                    0.2,
+                ImGuiCond_Always);
+            ImPlot::PlotLine("Membrane potential",
+                             m_x_data.data(),
+                             m_y_data.data(),
+                             static_cast<int>(m_x_data.size()));
+            ImPlot::EndPlot();
+        }
+        ImGui::End();
     }
 }
