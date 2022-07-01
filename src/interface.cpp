@@ -122,20 +122,26 @@ void Interface::update_model()
 
     m_neuron.update(delta_time);
 
-    std::bernoulli_distribution d(0.1);
+    std::bernoulli_distribution d(static_cast<double>(m_input_probability));
     if (d(m_rng))
     {
-        m_neuron.input(0.15f);
+        m_neuron.input(m_input_current);
     }
 
-    if (!m_x_data.empty() &&
-        m_x_data.back() - m_x_data.front() > m_viewed_seconds)
+    if (!m_time_data.empty() &&
+        m_time_data.back() - m_time_data.front() > m_viewed_seconds)
     {
-        m_x_data.clear();
-        m_y_data.clear();
+        m_time_data.clear();
+        m_membrane_potential_data.clear();
+        m_threshold_potential_data.clear();
+        m_eta_data.clear();
+        m_kappa_data.clear();
     }
-    m_x_data.push_back(total_time);
-    m_y_data.push_back(m_neuron.membrane_potential);
+    m_time_data.push_back(total_time);
+    m_membrane_potential_data.push_back(m_neuron.membrane_potential);
+    m_threshold_potential_data.push_back(m_neuron.threshold_potential);
+    m_eta_data.push_back(m_neuron.eta_exponential_term);
+    m_kappa_data.push_back(m_neuron.kappa_exponential_term);
 }
 
 void Interface::update_ui()
@@ -149,28 +155,36 @@ void Interface::update_ui()
                      nullptr,
                      ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse))
     {
+        ImGui::SliderFloat("Input current", &m_input_current, 0.0f, 0.5f);
+        ImGui::SliderFloat(
+            "Input probability", &m_input_probability, 0.0f, 1.0f);
         if (ImPlot::BeginPlot(
                 "Membrane potential plot",
                 {static_cast<float>(width), static_cast<float>(height)},
                 ImPlotFlags_NoTitle))
         {
-            const auto axis_x_min = m_x_data.front();
-            const auto axis_x_max = m_x_data.front() + m_viewed_seconds;
+            const auto axis_x_min = m_time_data.front();
+            const auto axis_x_max = m_time_data.front() + m_viewed_seconds;
             ImPlot::SetupAxisLimits(ImAxis_X1,
                                     static_cast<double>(axis_x_min),
                                     static_cast<double>(axis_x_max),
                                     ImGuiCond_Always);
-            ImPlot::SetupAxisLimits(
-                ImAxis_Y1,
-                -0.2,
-                static_cast<double>(
-                    Leaky_integrate_and_fire_neuron::threshold_potential) +
-                    0.2,
-                ImGuiCond_Always);
             ImPlot::PlotLine("Membrane potential",
-                             m_x_data.data(),
-                             m_y_data.data(),
-                             static_cast<int>(m_x_data.size()));
+                             m_time_data.data(),
+                             m_membrane_potential_data.data(),
+                             static_cast<int>(m_time_data.size()));
+            ImPlot::PlotLine("Threshold potential",
+                             m_time_data.data(),
+                             m_threshold_potential_data.data(),
+                             static_cast<int>(m_time_data.size()));
+            ImPlot::PlotLine("Eta term",
+                             m_time_data.data(),
+                             m_eta_data.data(),
+                             static_cast<int>(m_time_data.size()));
+            ImPlot::PlotLine("Kappa term",
+                             m_time_data.data(),
+                             m_kappa_data.data(),
+                             static_cast<int>(m_time_data.size()));
             ImPlot::EndPlot();
         }
         ImGui::End();

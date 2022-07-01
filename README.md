@@ -1,6 +1,6 @@
 # spiking_neural_network
 
-The goal of this project is to use a biological neuron model to program a spiking neural network and try to use it for unsupervised learning.
+This project aims to implement a spiking neural network and try to use it for unsupervised learning.
 
 ## Building this project
 
@@ -22,6 +22,7 @@ cmake --build build
   Press. https://neuronaldynamics.epfl.ch
 - [Spiking neural network (Wikipedia)](https://en.wikipedia.org/wiki/Spiking_neural_network)
 - [Biological neuron model (Wikipedia)](https://en.wikipedia.org/wiki/Biological_neuron_model)
+- [Spike response model (Wikipedia)](https://en.wikipedia.org/wiki/Spike_response_model)
 
 ## License
 
