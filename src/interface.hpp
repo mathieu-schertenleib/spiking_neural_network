@@ -6,8 +6,8 @@
 #define SDL_MAIN_HANDLED
 #include <SDL.h>
 
-#include <random>
 #include <chrono>
+#include <random>
 #include <vector>
 
 class Interface
@@ -24,9 +24,9 @@ private:
 
     SDL_Window *m_window {};
     SDL_Renderer *m_renderer {};
-    Neuron m_neuron {};
+    Simple_spike_response_model_neuron m_neuron {};
     float m_input_current {};
-    float m_input_probability {};
+    float m_input_probability {1.0f};
     std::default_random_engine m_rng;
     std::chrono::high_resolution_clock::time_point m_start_time;
     std::chrono::high_resolution_clock::time_point m_current_time;
