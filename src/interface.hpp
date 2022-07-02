@@ -33,7 +33,6 @@ private:
     std::chrono::high_resolution_clock::time_point m_last_time;
     std::vector<float> m_time_data;
     std::vector<float> m_membrane_potential_data;
-    std::vector<float> m_threshold_potential_data;
     std::vector<float> m_eta_data;
     std::vector<float> m_kappa_data;
 

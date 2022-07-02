@@ -79,9 +79,10 @@ void Interface::run()
         {
             ImGui_ImplSDL2_ProcessEvent(&event);
 
-            if (event.type == SDL_QUIT)
+            switch (event.type)
             {
-                return;
+            case SDL_QUIT: return;
+            case SDL_KEYDOWN: m_neuron.input(m_input_current); break;
             }
         }
 
@@ -133,14 +134,12 @@ void Interface::update_model()
     {
         m_time_data.clear();
         m_membrane_potential_data.clear();
-        m_threshold_potential_data.clear();
         m_eta_data.clear();
         m_kappa_data.clear();
     }
     m_time_data.push_back(total_time);
     m_membrane_potential_data.push_back(m_neuron.membrane_potential);
-    m_threshold_potential_data.push_back(m_neuron.threshold_potential);
-    m_eta_data.push_back(m_neuron.eta_exponential_term);
+    m_eta_data.push_back(m_neuron.eta_term);
     m_kappa_data.push_back(m_neuron.kappa_exponential_term);
 }
 
@@ -158,9 +157,17 @@ void Interface::update_ui()
         ImGui::SliderFloat("Input current", &m_input_current, 0.0f, 0.5f);
         ImGui::SliderFloat(
             "Input probability", &m_input_probability, 0.0f, 1.0f);
+        if (ImGui::Button("Reset"))
+        {
+            m_neuron.membrane_potential = Neuron::resting_membrane_potential;
+            for (auto &value : m_neuron.eta_exponential_terms)
+                value = 0.0f;
+            m_neuron.eta_term = 0.0f;
+            m_neuron.kappa_exponential_term = 0.0f;
+        }
         if (ImPlot::BeginPlot(
                 "Membrane potential plot",
-                {static_cast<float>(width), static_cast<float>(height)},
+                {static_cast<float>(width), static_cast<float>(height) * 0.7f},
                 ImPlotFlags_NoTitle))
         {
             const auto axis_x_min = m_time_data.front();
@@ -172,10 +179,6 @@ void Interface::update_ui()
             ImPlot::PlotLine("Membrane potential",
                              m_time_data.data(),
                              m_membrane_potential_data.data(),
-                             static_cast<int>(m_time_data.size()));
-            ImPlot::PlotLine("Threshold potential",
-                             m_time_data.data(),
-                             m_threshold_potential_data.data(),
                              static_cast<int>(m_time_data.size()));
             ImPlot::PlotLine("Eta term",
                              m_time_data.data(),

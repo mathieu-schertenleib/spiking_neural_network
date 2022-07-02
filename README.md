@@ -1,6 +1,6 @@
 # spiking_neural_network
 
-This project aims to implement a spiking neural network and try to use it for unsupervised learning.
+This project aims to implement a spiked neural network and try to use it for unsupervised learning.
 
 ## Building this project
 
