@@ -39,9 +39,7 @@ else ()
     message(WARNING "No warnings set for compiler '${CMAKE_CXX_COMPILER_ID}'")
 endif ()
 
-
 find_package(SDL2 REQUIRED)
-
 
 add_executable(snn
         src/main.cpp
@@ -61,3 +59,9 @@ target_compile_options(snn PRIVATE ${PROJECT_OPTIONS})
 target_compile_features(snn PRIVATE cxx_std_20)
 target_include_directories(snn PRIVATE external/imgui external/imgui/backends external/implot ${SDL2_INCLUDE_DIRS})
 target_link_libraries(snn PRIVATE ${SDL2_LIBRARIES})
+
+
+add_executable(tests tests/main.cpp src/neuron.cpp src/neuron.hpp)
+target_compile_options(tests PRIVATE ${PROJECT_OPTIONS})
+target_compile_features(tests PRIVATE cxx_std_20)
+target_include_directories(tests PRIVATE src)

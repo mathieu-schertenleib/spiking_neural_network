@@ -1,6 +1,6 @@
 # spiking_neural_network
 
-This project aims to implement a spiked neural network and try to use it for unsupervised learning.
+Experiments with spiking neural networks.
 
 ## Building this project
 
@@ -23,6 +23,7 @@ cmake --build build
 - [Spiking neural network (Wikipedia)](https://en.wikipedia.org/wiki/Spiking_neural_network)
 - [Biological neuron model (Wikipedia)](https://en.wikipedia.org/wiki/Biological_neuron_model)
 - [Spike response model (Wikipedia)](https://en.wikipedia.org/wiki/Spike_response_model)
+- [Retinomorphic sensor (Wikipedia)](https://en.wikipedia.org/wiki/Retinomorphic_sensor)
 
 ## License
 
